@@ -1,0 +1,54 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: shortener
+  labels:
+    app: content-shortener
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: content-shortener
+  template:
+    metadata:
+      labels:
+        app: content-shortener
+    spec:
+      containers:
+        - name: api
+          image: pf-content-shortener:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8094
+              name: http
+          env:
+            - name: SHORTENER_HTTP_PORT
+              value: "8094"
+            - name: SHORTENER_DEV_AUTH
+              value: "true"
+            - name: SHORTENER_DATABASE_URL
+              value: postgres://shortener:dev-shortener@postgres.platform.svc.cluster.local:5432/shortener?sslmode=disable
+            - name: SHORTENER_REDIS_URL
+              value: redis://redis.platform.svc.cluster.local:6379/0
+            - name: SHORTENER_PUBLIC_BASE
+              value: http://shortener.localhost
+            - name: SHORTENER_ALLOW_HOSTS
+              value: blog.localhost,localhost,127.0.0.1
+            - name: SHORTENER_CORS_ORIGIN
+              value: http://blog.localhost
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: http://otel-collector.platform.svc.cluster.local:4318
+            - name: OTEL_SERVICE_NAME
+              value: content-shortener
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 8094
+            initialDelaySeconds: 8
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8094
+            initialDelaySeconds: 15
+            periodSeconds: 10

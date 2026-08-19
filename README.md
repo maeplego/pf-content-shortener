@@ -49,6 +49,6 @@ go test ./...
 - P01 OIDC 未配線（`SHORTENER_DEV_AUTH=true`）
 - レート制限・QR・パスワード付きリンク・k6 は未着手
 - 日次グラフは件数テーブルまで。管理 UI はブログ側
-- overlay E / K8s は未着手
+- overlay E / K8s は `pf-cloud-k8s` overlay `e-content`
 
 設計: `project/portfolio-plan/content-platform/DESIGN.md`
