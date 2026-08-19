@@ -146,6 +146,47 @@ func TestUnknownCode404(t *testing.T) {
 	}
 }
 
+func TestStatsDailyAfterRedirect(t *testing.T) {
+	ts := testServer(t)
+	res := doJSON(t, "POST", ts.URL+"/v1/links", map[string]string{"url": "http://localhost/a", "slug": "graph-demo"}, "editor")
+	var created map[string]any
+	_ = json.NewDecoder(res.Body).Decode(&created)
+	res.Body.Close()
+	id, _ := created["id"].(string)
+	client := &http.Client{CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
+	redir, err := client.Get(ts.URL + "/graph-demo")
+	if err != nil {
+		t.Fatal(err)
+	}
+	redir.Body.Close()
+	if redir.StatusCode != 302 {
+		t.Fatalf("redirect %d", redir.StatusCode)
+	}
+	deadline := time.Now().Add(2 * time.Second)
+	for {
+		st := doJSON(t, "GET", ts.URL+"/v1/links/"+id+"/stats", nil, "editor")
+		var body struct {
+			Daily []struct {
+				Date  string `json:"date"`
+				Count int64  `json:"count"`
+			} `json:"daily"`
+		}
+		_ = json.NewDecoder(st.Body).Decode(&body)
+		st.Body.Close()
+		var total int64
+		for _, d := range body.Daily {
+			total += d.Count
+		}
+		if total >= 1 {
+			return
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("expected daily click, got %+v", body.Daily)
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+}
+
 func TestStatsForbidden(t *testing.T) {
 	ts := testServer(t)
 	res := doJSON(t, "POST", ts.URL+"/v1/links", map[string]string{"url": "http://localhost/a"}, "editor")
