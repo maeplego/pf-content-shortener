@@ -1,21 +1,21 @@
 # pf-content-shortener
 
-P08 URL 短縮（アイデア 09）のホットパスです。**学習用であり、本番短縮基盤の置き換えではありません。** 公開デモの作成先は許可ホストのみです。
+学習用の URL 短縮です。リダイレクトはブログ（Next.js）に載せません。レイテンシと悪用耐性が静的配信と別物だからです。**本番短縮サービスの置き換えではありません。**
 
-リダイレクトは Next.js に載せません。レイテンシと悪用耐性がブログの SSG と別物だからです。
+公開デモで作れる短縮先は、許可したホストだけです。
 
-## できること（MVP）
+## できること
 
-- `POST /v1/links` で http(s) URL を短縮（開発ヘッダ `X-Dev-User-Sub`）
-- `GET /:code` が **302**。クリック集計は応答後の非同期
-- コードは予測困難（連番禁止）。カスタム slug は任意、数字のみは拒否
-- `javascript:` / `data:` / 許可リスト外ホストは 400
-- Redis に code→url を載せ、ミスしても Postgres で解決
-- 生 IP は保存しない（ハッシュ計算のみ。集計テーブルは日次件数）
+- `POST /v1/links` で https の URL を短縮する（開発ヘッダ `X-Dev-User-Sub`）
+- `GET /:code` が 302。クリック集計は応答のあと非同期
+- コードは連番ではありません。数字だけのカスタム slug は拒否します
+- `javascript:` や許可リスト外ホストは 400
+- Redis に載せて、欠けても Postgres で解決します
+- 生 IP は保存しません
 
-## 単体デモ
+## 起動
 
-統合デモ（ブログ含む）は兄弟 `pf-content-infra` を使ってください。短縮だけなら:
+ブログ込みは [pf-content-infra](https://github.com/maeplego/pf-content-infra) が簡単です。短縮だけなら:
 
 ```powershell
 cd deploy
@@ -25,8 +25,8 @@ docker compose up -d --build
 
 | URL | 用途 |
 | --- | --- |
-| http://localhost:8094/health | liveness |
-| http://localhost:8094/ready | Postgres ping |
+| http://localhost:8094/health | ヘルス |
+| http://localhost:8094/ready | Postgres |
 
 ```powershell
 curl -H "X-Dev-User-Sub: editor" -H "Content-Type: application/json" `
@@ -34,7 +34,7 @@ curl -H "X-Dev-User-Sub: editor" -H "Content-Type: application/json" `
   http://localhost:8094/v1/links
 ```
 
-返った `shortUrl` を開くと 302 します。ブログが無いと到着先は 接続失敗になり得ます。
+返った `shortUrl` を開くと 302 します。到着先のブログが無いと接続失敗になります。
 
 ## テスト
 
@@ -42,13 +42,6 @@ curl -H "X-Dev-User-Sub: editor" -H "Content-Type: application/json" `
 go test ./...
 ```
 
-メモリ実装。Redis / Postgres は Compose 用。integration タグはこのスライスに無い。
+レート制限、QR、パスワード付きリンクはありません。日次件数テーブルはあり、グラフ UI はブログ側です。
 
-## 既知の制限
-
-- P01 OIDC 未配線（`SHORTENER_DEV_AUTH=true`）
-- レート制限・QR・パスワード付きリンク・k6 は未着手
-- 日次グラフは件数テーブルまで。管理 UI はブログ側
-- overlay E / K8s は `pf-cloud-k8s` overlay `e-content`
-
-設計: `project/portfolio-plan/content-platform/DESIGN.md`
+設計の詳細は [portfolio-plan](https://github.com/maeplego/portfolio-plan) の `portfolio-plan/content-platform/docs/` です。
