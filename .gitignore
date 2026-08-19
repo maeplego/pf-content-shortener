@@ -1,0 +1,27 @@
+# Binaries
+/bin/
+/dist/
+/server
+/server.exe
+*.exe
+*.test
+*.out
+coverage.out
+coverage.html
+vendor/
+
+# Secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+chat-context/
+
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+*.log

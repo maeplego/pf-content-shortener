@@ -1,0 +1,49 @@
+services:
+  shortener-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: shortener
+      POSTGRES_PASSWORD: shortener
+      POSTGRES_DB: shortener
+    ports:
+      - "5437:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U shortener -d shortener"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    volumes:
+      - shortener-pg:/var/lib/postgresql/data
+
+  shortener-redis:
+    image: redis:7-alpine
+    ports:
+      - "6377:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  shortener:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    environment:
+      SHORTENER_HTTP_PORT: "8094"
+      SHORTENER_DEV_AUTH: ${SHORTENER_DEV_AUTH:-true}
+      SHORTENER_DATABASE_URL: ${SHORTENER_DATABASE_URL:-postgres://shortener:shortener@shortener-db:5432/shortener?sslmode=disable}
+      SHORTENER_REDIS_URL: ${SHORTENER_REDIS_URL:-redis://shortener-redis:6379/0}
+      SHORTENER_PUBLIC_BASE: ${SHORTENER_PUBLIC_BASE:-http://localhost:8094}
+      SHORTENER_ALLOW_HOSTS: ${SHORTENER_ALLOW_HOSTS:-localhost,127.0.0.1}
+      SHORTENER_CORS_ORIGIN: ${SHORTENER_CORS_ORIGIN:-http://localhost:3007}
+    ports:
+      - "8094:8094"
+    depends_on:
+      shortener-db:
+        condition: service_healthy
+      shortener-redis:
+        condition: service_healthy
+
+volumes:
+  shortener-pg:

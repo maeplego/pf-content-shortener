@@ -1,0 +1,6 @@
+.git
+*.md
+deploy
+*.exe
+*.test
+coverage.out
