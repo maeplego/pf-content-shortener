@@ -12,6 +12,7 @@ import (
 
 	"github.com/portfolio/pf-content-shortener/internal/auth"
 	"github.com/portfolio/pf-content-shortener/internal/link"
+	"github.com/portfolio/pf-content-shortener/internal/ratelimit"
 	"github.com/portfolio/pf-content-shortener/internal/target"
 )
 
@@ -21,13 +22,19 @@ type Server struct {
 	cors       string
 	publicBase string
 	ready      func() error
+	redirectRL *ratelimit.Limiter
+	now        func() time.Time
 }
 
-func New(svc *link.Service, mw *auth.Middleware, cors, publicBase string, ready func() error) *Server {
+func New(svc *link.Service, mw *auth.Middleware, cors, publicBase string, ready func() error, redirectRPM int) *Server {
 	if ready == nil {
 		ready = func() error { return nil }
 	}
-	return &Server{svc: svc, auth: mw, cors: cors, publicBase: strings.TrimRight(publicBase, "/"), ready: ready}
+	return &Server{
+		svc: svc, auth: mw, cors: cors, publicBase: strings.TrimRight(publicBase, "/"), ready: ready,
+		redirectRL: ratelimit.New(redirectRPM, time.Minute),
+		now:        time.Now,
+	}
 }
 
 func (s *Server) Routes() http.Handler {
@@ -156,6 +163,11 @@ func (s *Server) stats(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) redirect(w http.ResponseWriter, r *http.Request) {
 	code := r.PathValue("code")
+	ip := ipHash(r)
+	if !s.redirectRL.Allow(ip, s.now()) {
+		writeError(w, http.StatusTooManyRequests, "rate_limited", "too many redirects from this client")
+		return
+	}
 	l, err := s.svc.Resolve(r.Context(), code)
 	if err != nil {
 		if errors.Is(err, link.ErrNotFound) || errors.Is(err, link.ErrInactive) {
@@ -167,7 +179,6 @@ func (s *Server) redirect(w http.ResponseWriter, r *http.Request) {
 	}
 	// Hot path: write 302 first. Clicks are fire-and-forget so Redis/DB lag
 	// does not sit on the redirect. Raw IP is hashed, not stored.
-	_ = ipHash(r)
 	s.svc.RecordClickAsync(l.ID)
 	http.Redirect(w, r, l.URL, http.StatusFound)
 }

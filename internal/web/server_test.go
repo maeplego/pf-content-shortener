@@ -21,7 +21,7 @@ func testServer(t *testing.T) *httptest.Server {
 	st := memory.New()
 	clk := func() time.Time { return time.Date(2026, 8, 19, 6, 0, 0, 0, time.UTC) }
 	svc := link.NewService(st, memory.NewCache(), clk, nil, []string{"localhost", "127.0.0.1"}, time.Hour)
-	h := web.New(svc, auth.New(true), "", "http://localhost:8094", nil)
+	h := web.New(svc, auth.New(true), "", "http://localhost:8094", nil, 2)
 	ts := httptest.NewServer(h.Routes())
 	t.Cleanup(ts.Close)
 	return ts
@@ -70,6 +70,46 @@ func TestCreateUnauthorized(t *testing.T) {
 	defer res.Body.Close()
 	if res.StatusCode != 401 {
 		t.Fatalf("got %d", res.StatusCode)
+	}
+}
+
+func noFollowClient() *http.Client {
+	return &http.Client{CheckRedirect: func(_ *http.Request, _ []*http.Request) error { return http.ErrUseLastResponse }}
+}
+
+func TestRedirectRateLimited(t *testing.T) {
+	ts := testServer(t)
+	client := noFollowClient()
+	res := doJSON(t, "POST", ts.URL+"/v1/links", map[string]string{
+		"url": "http://localhost:3007/posts/ratelimit-demo",
+	}, "editor")
+	defer res.Body.Close()
+	if res.StatusCode != 201 {
+		t.Fatalf("create %d", res.StatusCode)
+	}
+	var body struct {
+		Code string `json:"code"`
+	}
+	if err := json.NewDecoder(res.Body).Decode(&body); err != nil {
+		t.Fatal(err)
+	}
+	for i := 0; i < 2; i++ {
+		r, err := client.Get(ts.URL + "/" + body.Code)
+		if err != nil {
+			t.Fatal(err)
+		}
+		r.Body.Close()
+		if r.StatusCode != http.StatusFound {
+			t.Fatalf("redirect %d", r.StatusCode)
+		}
+	}
+	r, err := client.Get(ts.URL + "/" + body.Code)
+	if err != nil {
+		t.Fatal(err)
+	}
+	r.Body.Close()
+	if r.StatusCode != http.StatusTooManyRequests {
+		t.Fatalf("expected 429 got %d", r.StatusCode)
 	}
 }
 

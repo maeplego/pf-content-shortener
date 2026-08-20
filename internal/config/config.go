@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -16,6 +17,7 @@ type Config struct {
 	AllowHosts  []string
 	CORSOrigin  string
 	CacheTTL    time.Duration
+	RedirectRPM int
 }
 
 func FromEnv() (Config, error) {
@@ -45,11 +47,24 @@ func FromEnv() (Config, error) {
 		AllowHosts:  hosts,
 		CORSOrigin:  cors,
 		CacheTTL:    24 * time.Hour,
+		RedirectRPM: envInt("SHORTENER_REDIRECT_RPM", 120),
 	}
 	if !cfg.DevAuth {
 		return cfg, fmt.Errorf("SHORTENER_DEV_AUTH=true is required in this slice (P01 OIDC is not wired yet)")
 	}
 	return cfg, nil
+}
+
+func envInt(key string, fallback int) int {
+	v := strings.TrimSpace(os.Getenv(key))
+	if v == "" {
+		return fallback
+	}
+	n, err := strconv.Atoi(v)
+	if err != nil || n <= 0 {
+		return fallback
+	}
+	return n
 }
 
 func splitCSV(s string) []string {

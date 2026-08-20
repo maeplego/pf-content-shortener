@@ -59,7 +59,7 @@ func main() {
 	}
 
 	svc := link.NewService(store, c, time.Now, nil, cfg.AllowHosts, cfg.CacheTTL)
-	handler := web.New(svc, auth.New(cfg.DevAuth), cfg.CORSOrigin, cfg.PublicBase, ready).Routes()
+	handler := web.New(svc, auth.New(cfg.DevAuth), cfg.CORSOrigin, cfg.PublicBase, ready, cfg.RedirectRPM).Routes()
 	srv := &http.Server{
 		Addr:              cfg.HTTPAddr,
 		Handler:           handler,
