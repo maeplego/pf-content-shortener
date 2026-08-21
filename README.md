@@ -42,7 +42,7 @@ curl -H "X-Dev-User-Sub: editor" -H "Content-Type: application/json" `
 go test ./...
 ```
 
-レート制限、QR、パスワード付きリンクはありません。日次件数テーブルはあり、グラフ UI はブログ側です。
+レート制限はリダイレクト（`GET /:code`）にクライアント単位の RPM 上限があります（超過は 429）。QR、パスワード付きリンクはありません。日次件数テーブルはあり、グラフ UI はブログ側です。
 
 設計の詳細は [portfolio-plan](https://github.com/maeplego/portfolio-plan) の `portfolio-plan/content-platform/docs/` です。
 
