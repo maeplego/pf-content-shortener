@@ -1,4 +1,4 @@
-# pf-content-shortener
+﻿# pf-content-shortener
 
 学習用の URL 短縮です。リダイレクトはブログ（Next.js）に載せません。レイテンシと悪用耐性が静的配信と別物だからです。**本番短縮サービスの置き換えではありません。**
 
@@ -45,3 +45,13 @@ go test ./...
 レート制限、QR、パスワード付きリンクはありません。日次件数テーブルはあり、グラフ UI はブログ側です。
 
 設計の詳細は [portfolio-plan](https://github.com/maeplego/portfolio-plan) の `portfolio-plan/content-platform/docs/` です。
+
+## ライセンスと利用条件
+
+本リポジトリは **デモ・学習・社内評価用** です。現状品質に **保証はありません**。
+
+- 許可: クローン、ローカル実行、学習、非本番の評価
+- 別契約が必要: 本番運用、有償サービスへの組込み、再販・托管の提供
+
+詳細は [LICENSE](./LICENSE) と [licensing.md](https://github.com/maeplego/portfolio-plan/blob/master/portfolio-plan/licensing.md) を参照してください。
+
